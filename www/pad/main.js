@@ -81,6 +81,11 @@ define([
     /* catch `type="_moz"` before it goes over the wire */
     var brFilter = function (hj) {
         if (hj[1].type === '_moz') { hj[1].type = undefined; }
+        for (var i = hj[2].length - 1; i > 0; i--) {
+            if (typeof(hj[2][i]) === 'string' && typeof(hj[2][i-1]) === 'string') {
+                hj[2].splice(i-1, 2, hj[2][i-1] + hj[2][i]);
+            }
+        }
         return hj;
     };
 
