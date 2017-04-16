@@ -5,6 +5,7 @@ require.config({ paths: {
 define([
     '/api/config?cb=' + Math.random().toString(16).substring(2),
     '/bower_components/chainpad-netflux/chainpad-netflux.js',
+    '/bower_components/hyperjson/hyperjson.js',
     '/bower_components/chainpad-crypto/crypto.js',
     '/common/toolbar.js',
     '/bower_components/textpatcher/TextPatcher.amd.js',
@@ -14,15 +15,18 @@ define([
     '/bower_components/secure-fabric.js/dist/fabric.min.js',
     '/bower_components/jquery/dist/jquery.min.js',
     '/bower_components/file-saver/FileSaver.min.js',
-], function (Config, Realtime, Crypto, Toolbar, TextPatcher, JSONSortify, JsonOT, Cryptpad) {
+    '/bower_components/diff-dom/diffDOM.js',
+], function (Config, Realtime, Hyperjson, Crypto, Toolbar, TextPatcher, JSONSortify, JsonOT, Cryptpad) {
     var saveAs = window.saveAs;
     var Messages = Cryptpad.Messages;
 
     var module = window.APP = { };
     var $ = module.$ = window.jQuery;
     var Fabric = module.Fabric = window.fabric;
+    window.Hyperjson = Hyperjson;
 
     $(function () {
+    var DiffDom = window.diffDOM;
     Cryptpad.addLoadingScreen();
     var onConnectError = function (info) {
         Cryptpad.errorLoadingScreen(Messages.websocketError);
@@ -36,49 +40,6 @@ define([
     }
 
     var andThen = function () {
-        /* Initialize Fabric */
-        var canvas = module.canvas = new Fabric.Canvas('canvas');
-        var $canvas = $('canvas');
-        var $controls = $('#controls');
-        var $canvasContainer = $('canvas').parents('.canvas-container');
-
-        var $width = $('#width');
-        var updateBrushWidth = function () {
-            canvas.freeDrawingBrush.width = Number($width.val());
-        };
-        updateBrushWidth();
-
-        $width.on('change', updateBrushWidth);
-
-        var palette = ['red', 'blue', 'green', 'white', 'black', 'purple',
-            'gray', 'beige', 'brown', 'cyan', 'darkcyan', 'gold', 'yellow', 'pink'];
-        var $colors = $('#colors');
-        $colors.html(function (i, val) {
-            return palette.map(function (c) {
-                    return "<span class='palette' style='background-color:"+c+"'></span>";
-                }).join("");
-        });
-
-        $('.palette').on('click', function () {
-            var color = $(this).css('background-color');
-            canvas.freeDrawingBrush.color = color;
-        });
-
-        var setEditable = function (bool) {
-            if (readOnly && bool) { return; }
-            if (bool) { $controls.show(); }
-            else { $controls.hide(); }
-
-            canvas.isDrawingMode = bool;
-            if (!bool) {
-                canvas.deactivateAll();
-                canvas.renderAll();
-            }
-            canvas.forEachObject(function (object) {
-                object.selectable = bool;
-            });
-            $canvasContainer.css('border-color', bool? 'black': 'red');
-        };
 
         var saveImage = module.saveImage = function () {
             var defaultName = "pretty-picture.png";
@@ -218,22 +179,23 @@ define([
             $bar.find('.' + Toolbar.constants.title).find('input').attr("placeholder", defaultName);
         };
 
-
+/*
         var updateMetadata = function(shjson) {
             // Extract the user list (metadata) from the hyperjson
             var json = (shjson === "") ? "" : JSON.parse(shjson);
             var titleUpdated = false;
-            if (json && json.metadata) {
-                if (json.metadata.users) {
-                    var userData = json.metadata.users;
+            var peerMetadata = json[3];
+            if (peerMetadata && json.peerMetadata) {
+                if (peerMetadata.users) {
+                    var userData = peerMetadata.users;
                     // Update the local user data
                     addToUserData(userData);
                 }
-                if (json.metadata.defaultTitle) {
-                    updateDefaultTitle(json.metadata.defaultTitle);
+                if (peerMetadata.defaultTitle) {
+                    updateDefaultTitle(peerMetadata.defaultTitle);
                 }
-                if (typeof json.metadata.title !== "undefined") {
-                    updateTitle(json.metadata.title || defaultName);
+                if (typeof peerMetadata.title !== "undefined") {
+                    updateTitle(peeMetadata.title || defaultName);
                     titleUpdated = true;
                 }
             }
@@ -241,45 +203,148 @@ define([
                 updateTitle(defaultName);
             }
         };
+*/
+
+   var updateMetadata = function(shjson) {
+                // Extract the user list (metadata) from the hyperjson
+                if (!shjson || typeof (shjson) !== "string") { updateTitle(defaultName); return; }
+                var hjson = JSON.parse(shjson);
+                var peerMetadata = hjson[3];
+                var titleUpdated = false;
+                if (peerMetadata && peerMetadata.metadata) {
+                    if (peerMetadata.metadata.users) {
+                        var userData = peerMetadata.metadata.users;
+                        // Update the local user data
+                        addToUserData(userData);
+                    }
+                    if (peerMetadata.metadata.defaultTitle) {
+                        updateDefaultTitle(peerMetadata.metadata.defaultTitle);
+                    }
+                    if (typeof peerMetadata.metadata.title !== "undefined") {
+                        updateTitle(peerMetadata.metadata.title || defaultName);
+                        titleUpdated = true;
+                    }
+                }
+                if (!titleUpdated) {
+                    updateTitle(defaultName);
+                }
+            };
+
+        var hjson2domstring = function(hjson) {
+            var userDocStateDom = hjsonToDom(JSON.parse(hjson));
+            var tmp = document.createElement("div");
+            tmp.appendChild(userDocStateDom);
+            return tmp.innerHTML;
+        };
+
+        var domstring2hjson = function(domstring) {
+            var tmp = document.createElement("div");
+            tmp.innerHTML = domstring;
+            return stringifyDOM(tmp.firstChild);
+};
 
         var onRemote = config.onRemote = Catch(function () {
             if (initializing) { return; }
-            var userDoc = module.realtime.getUserDoc();
-
+            var svgCanvas = frames[0].window.svgCanvas;
+            var svgEditor = frames[0].window.svgEditor;
+            /* var userDoc = module.realtime.getUserDoc();
             updateMetadata(userDoc);
             var json = JSON.parse(userDoc);
             var remoteDoc = json.content;
+            */
+            svgCanvas.clearSelection();
+            var currentSVG = svgCanvas.getSvgString();
+            var oldShjson = domstring2hjson(currentSVG);            
+            var shjson = module.realtime.getUserDoc();
 
-            canvas.loadFromJSON(remoteDoc);
-            canvas.renderAll();
+            // Update the user list (metadata) from the hyperjson
+            updateMetadata(shjson);
 
-            if (readOnly) { setEditable(false); }
+            console.log("Remote content hjson: " + shjson);
+
+            var newSVG = hjson2domstring(shjson);            
+            if (newSVG==currentSVG)
+                return;
+            console.log("Remote content svg: " + newSVG);
+            svgCanvas.clear();
+            svgCanvas.setSvgString(newSVG);
+            svgCanvas.clearSelection();
+            svgEditor.updateCanvas();
         });
-        setEditable(false);
 
-        var stringifyInner = function (textValue) {
-            var obj = {
-                content: textValue,
-                metadata: {
-                    users: userData,
-                    defaultTitle: defaultName
+        var diffOptions = {
+                preDiffApply: function (info) {
+                },
+                postDiffApply : function(info) {
                 }
-            };
-            if (!initializing) {
-                obj.metadata.title = document.title;
-            }
-            // stringify the json and send it into chainpad
+        };
+
+        var DD = new DiffDom(diffOptions);
+
+        // apply patches, and try not to lose the cursor in the process!
+        var applyHjson = function (shjson, domElement) {
+                var userDocStateDom = hjsonToDom(JSON.parse(shjson));
+
+                if (!readOnly && !initializing) {
+                    userDocStateDom.setAttribute("contenteditable", "true"); // lol wtf
+                }
+                var patch = (DD).diff(domElement, userDocStateDom);
+                (DD).apply(domElement, patch);
+        };
+
+        var stringify = function (obj) {
             return JSONSortify(obj);
         };
 
+        var hjsonToDom = function (H) {
+            var dom = Hyperjson.toDOM(H);
+            return dom;
+        };
+
+        var isNotMagicLine = function (el) {
+            return !(el && typeof(el.getAttribute) === 'function' &&
+             el.getAttribute('class') &&
+             el.getAttribute('class').split(' ').indexOf('non-realtime') !== -1);
+        };
+
+        /* catch `type="_moz"` before it goes over the wire */
+        var brFilter = function (hj) {
+            if (hj[1].type === '_moz') { hj[1].type = undefined; }
+            return hj;
+        };
+
+        var stringifyDOM = module.stringifyDOM = function (dom) {
+                var hjson = Hyperjson.fromDOM(dom, isNotMagicLine, brFilter);
+                hjson[3] = {
+                    metadata: {
+                        users: userData,
+                        defaultTitle: defaultName
+                    }
+                };
+                if (!initializing) {
+                    hjson[3].metadata.title = document.title;
+                } else if (Cryptpad.initialName && !hjson[3].metadata.title) {
+                    hjson[3].metadata.title = Cryptpad.initialName;
+                }
+                return stringify(hjson);
+        };
+
+        var getDocElement = function() {
+            return jQuery('#svgcontent', window.parent.frames[0].document)[0];
+        }
 
         var onLocal = config.onLocal = Catch(function () {
             if (initializing) { return; }
             if (readOnly) { return; }
+            
+            var svgCanvas = frames[0].window.svgCanvas;
+            var svgEditor = frames[0].window.svgEditor;
 
-            var content = stringifyInner(canvas.toDatalessJSON());
-
-            module.patchText(content);
+            console.log("in onLocal");
+            svgCanvas.clearSelection();
+            var hjson = domstring2hjson(svgCanvas.getSvgString());
+            console.log("Content: " + hjson);
+            module.patchText(hjson);
         });
 
         var setName = module.setName = function (newName) {
@@ -311,7 +376,7 @@ define([
             });
 
             Cryptpad.removeLoadingScreen();
-            setEditable(true);
+            // setEditable(true);
             initializing = false;
             onRemote();
             Cryptpad.getLastName(function (err, lastName) {
@@ -338,7 +403,7 @@ define([
         };
 
         var onAbort = config.onAbort = function (info) {
-            setEditable(false);
+            // setEditable(false);
             window.alert("Server Connection Lost");
 
             if (window.confirm("Would you like to save your image?")) {
@@ -347,8 +412,6 @@ define([
         };
 
         var rt = Realtime.start(config);
-
-        canvas.on('mouse:up', onLocal);
 
         $('#clear').on('click', function () {
             canvas.clear();
