@@ -158,5 +158,12 @@ svgEditor.addExtension("cryptpad", function(S) {
           elementChanged : function(opts) {
               console.log("changed");
               window.top.APP.config.onLocal();
-          }}
+          },
+          mouseUp : function(opts) {
+              console.log("changed");
+              window.top.APP.config.onLocal();
+          },
+
+
+         }
 });
