@@ -252,6 +252,7 @@ define([
             var json = JSON.parse(userDoc);
             var remoteDoc = json.content;
             */
+            var selectedElements = storeSelection(svgCanvas);
             svgCanvas.clearSelection();
             var currentSVG = svgCanvas.getSvgString();
             var oldShjson = domstring2hjson(currentSVG);            
@@ -270,6 +271,7 @@ define([
             svgCanvas.setSvgString(newSVG);
             svgCanvas.clearSelection();
             svgEditor.updateCanvas();
+            restoreSelection(svgCanvas, selectedElements);
         });
 
         var diffOptions = {
@@ -333,6 +335,26 @@ define([
             return jQuery('#svgcontent', window.parent.frames[0].document)[0];
         }
 
+        var storeSelection = function(svgCanvas) {
+            var elementIds = []
+            var elements = svgCanvas.getSelectedElems();
+            elements.forEach(function(element) {
+              if (element!=null)
+                elementIds.push(element.id);
+            });                
+            return elementIds;
+        }
+
+        var restoreSelection = function(svgCanvas, elements) {
+            elements.forEach(function(element) {
+             if (element!=null) {
+              var el = svgCanvas.getElem(element);
+              if (el!=null)
+                svgCanvas.addToSelection([el]);
+             }
+            });                 
+        }
+
         var onLocal = config.onLocal = Catch(function () {
             if (initializing) { return; }
             if (readOnly) { return; }
@@ -341,10 +363,14 @@ define([
             var svgEditor = frames[0].window.svgEditor;
 
             console.log("in onLocal");
+            var selectedElements = storeSelection(svgCanvas);
+            console.log(selectedElements);
             svgCanvas.clearSelection();
             var hjson = domstring2hjson(svgCanvas.getSvgString());
             console.log("Content: " + hjson);
             module.patchText(hjson);
+            console.log(selectedElements);
+            restoreSelection(svgCanvas, selectedElements);
         });
 
         var setName = module.setName = function (newName) {
