@@ -115,6 +115,17 @@ define(function () {
     out.cancel = "Annuler";
     out.cancelButton = 'Annuler (Echap)';
 
+    out.historyButton = "Afficher l'historique du document";
+    out.history_next = "Voir la version suivante";
+    out.history_prev = "Voir la version précédente";
+    out.history_goTo = "Voir la version sélectionnée";
+    out.history_close = "Retour";
+    out.history_closeTitle = "Fermer l'historique";
+    out.history_restore = "Restaurer";
+    out.history_restoreTitle = "Restaurer la version du document sélectionnée";
+    out.history_restorePrompt = "Êtes-vous sûr de vouloir remplacer la version actuelle du document par la version affichée ?";
+    out.history_restoreDone = "Document restauré";
+
     // Polls
 
     out.poll_title = "Sélecteur de date Zero Knowledge";
@@ -214,6 +225,7 @@ define(function () {
     out.fc_remove = "Supprimer définitivement";
     out.fc_empty = "Vider la corbeille";
     out.fc_prop = "Propriétés";
+    out.fc_sizeInKilobytes = "Taille en kilo-octets";
     // fileObject.js (logs)
     out.fo_moveUnsortedError = "La liste des éléments non triés ne peut pas contenir de dossiers.";
     out.fo_existingNameError = "Ce nom est déjà utilisé dans ce répertoire. Veuillez en choisir un autre.";
@@ -294,6 +306,12 @@ define(function () {
 
     out.settings_anonymous = "Vous n'êtes pas connectés. Ces préférences seront utilisées pour ce navigateur.";
     out.settings_publicSigningKey = "Clé publique de signature";
+
+    out.settings_usage = "Utilisation";
+    out.settings_usageTitle = "Voir la taille totale de vos pads épinglés en Mo";
+    out.settings_pinningNotAvailable = "Les pads épinglés sont disponibles uniquement pour les utilisateurs enregistrés.";
+    out.settings_pinningError = "Un problème est survenu";
+    out.settings_usageAmount = "Vos pads épinglés occupent {0} Mo";
 
     // index.html
 
@@ -378,12 +396,12 @@ define(function () {
     // Initial states
 
     out.initialState = [
-        '<span style="font-size:18px;"><p>',
+        '<span style="font-size:16px;"><p>',
         'Voici <strong>CryptPad</strong>, l\'éditeur collaboratif en temps-réel Zero Knowledge. Tout est sauvegardé dés que vous le tapez.',
         '<br>',
         'Partagez le lien vers ce pad avec des amis ou utilisez le bouton <span style="background-color:#5cb85c;color:#ffffff;">&nbsp;Partager&nbsp;</span> pour obtenir le <em>lien de lecture-seule</em>, qui permet la lecture mais non la modification.',
         '</p>',
-        '<p><span style="color:#808080; font-size: 18px;">',
+        '<p><span style="color:#808080; font-size: 16px;">',
         '<em>',
         'Lancez-vous, commencez à taper...',
         '</em></span></p></span>',
@@ -446,7 +464,7 @@ define(function () {
     out.tips.marker = "Vous pouvez surligner du texte dans un pad en utilisant l'option \"marker\" dans le menu déroulant des styles.";
 
     out.feedback_about = "Si vous lisez ceci, vous vous demandez probablement pourquoi CryptPad envoie des requêtes vers des pages web quand vous realisez certaines actions.";
-    out.feedback_privacy = "Nous prenons au sérieux le respect de votre vie privée, et en même temps nous souhaitons rendre CryptPad très simple à utiliser. Nous utilisons cette page pour comprendre quelles foncitonnalités dans l'interface comptent le plus pour les utilisateurs, en l'appelant avec un paramètre spécifiant quelle action a été réalisée.";
+    out.feedback_privacy = "Nous prenons au sérieux le respect de votre vie privée, et en même temps nous souhaitons rendre CryptPad très simple à utiliser. Nous utilisons cette page pour comprendre quelles fonctionnalités dans l'interface comptent le plus pour les utilisateurs, en l'appelant avec un paramètre spécifiant quelle action a été réalisée.";
     out.feedback_optout = "Si vous le souhaitez, vous pouvez désactiver ces requêtes en vous rendant dans <a href='/settings/'>votre page de préférences</a>, où vous trouverez une case à cocher pour désactiver le retour d'expérience.";
 
     return out;

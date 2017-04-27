@@ -212,11 +212,45 @@ var getChannelList = function (store, Sessions, publicKey, cb) {
 
 var getFileSize = function (store, channel, cb) {
     if (!isValidChannel(channel)) { return void cb('INVALID_CHAN'); }
+    if (typeof(store.getChannelSize) !== 'function') {
+        return cb('GET_CHANNEL_SIZE_UNSUPPORTED');
+    }
 
-    // TODO don't blow up if their store doesn't have this API
     return void store.getChannelSize(channel, function (e, size) {
         if (e) { return void cb(e.code); }
         cb(void 0, size);
+    });
+};
+
+var getMultipleFileSize = function (store, channels, cb) {
+
+    if (!Array.isArray(channels)) { return cb('INVALID_LIST'); }
+    if (typeof(store.getChannelSize) !== 'function') {
+        return cb('GET_CHANNEL_SIZE_UNSUPPORTED');
+    }
+
+    var i = channels.length;
+    var counts = {};
+
+    var done = function () {
+        i--;
+        if (i === 0) { return cb(void 0, counts); }
+    };
+
+    channels.forEach(function (channel) {
+        if (!isValidChannel(channel)) {
+            counts[channel] = -1;
+            return done();
+        }
+        store.getChannelSize(channel, function (e, size) {
+            if (e) {
+                counts[channel] = -1;
+                return done();
+            }
+
+            counts[channel] = size;
+            done();
+        });
     });
 };
 
@@ -351,13 +385,21 @@ RPC.create = function (config, cb) {
     var store;
 
     var rpc = function (ctx, data, respond) {
+        if (!Array.isArray(data)) {
+            return void respond('INVALID_ARG_FORMAT');
+        }
+
         if (!data.length) {
             return void respond("INSUFFICIENT_ARGS");
         } else if (data.length !== 1) {
-            console.log(data.length);
+            console.log('[UNEXPECTED_ARGUMENTS_LENGTH] %s', data.length);
         }
 
         var msg = data[0].slice(0);
+
+        if (!Array.isArray(msg)) {
+            return void respond('INVALID_ARG_FORMAT');
+        }
 
         var signature = msg.shift();
         var publicKey = msg.shift();
@@ -430,6 +472,11 @@ RPC.create = function (config, cb) {
                 });
             case 'GET_FILE_SIZE':
                 return void getFileSize(ctx.store, msg[1], Respond);
+            case 'GET_MULTIPLE_FILE_SIZE':
+                return void getMultipleFileSize(ctx.store, msg[1], function (e, dict) {
+                    if (e) { return void Respond(e); }
+                    Respond(void 0, dict);
+                });
             default:
                 return void Respond('UNSUPPORTED_RPC_CALL', msg);
         }

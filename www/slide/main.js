@@ -1,5 +1,5 @@
-require.config({ paths: { 'json.sortify': '/bower_components/json.sortify/dist/JSON.sortify' } });
 define([
+    'jquery',
     '/bower_components/chainpad-crypto/crypto.js',
     '/bower_components/chainpad-netflux/chainpad-netflux.js',
     '/bower_components/textpatcher/TextPatcher.js',
@@ -13,10 +13,8 @@ define([
     '/common/visible.js',
     '/common/notify.js',
     '/slide/slide.js',
-    '/bower_components/file-saver/FileSaver.min.js',
-    '/bower_components/jquery/dist/jquery.min.js',
-], function (Crypto, Realtime, TextPatcher, Toolbar, JSONSortify, JsonOT, Cryptpad, Cryptget, Modes, Themes, Visible, Notify, Slide) {
-    var $ = window.jQuery;
+    '/bower_components/file-saver/FileSaver.min.js'
+], function ($, Crypto, Realtime, TextPatcher, Toolbar, JSONSortify, JsonOT, Cryptpad, Cryptget, Modes, Themes, Visible, Notify, Slide) {
     var saveAs = window.saveAs;
 
     var Messages = Cryptpad.Messages;
@@ -74,6 +72,8 @@ define([
             var defaultName = Cryptpad.getDefaultName(parsedHash);
             var initialState = Messages.slideInitialState;
 
+            var isHistoryMode = false;
+
             var editor = module.editor = CMeditor.fromTextArea($textarea[0], {
                 lineNumbers: true,
                 lineWrapping: true,
@@ -83,7 +83,7 @@ define([
                 styleActiveLine : true,
                 search: true,
                 highlightSelectionMatches: {showToken: /\w+/},
-                extraKeys: {"Ctrl-Q": function(cm){ cm.foldCode(cm.getCursor()); }},
+                extraKeys: {"Shift-Ctrl-R": undefined},
                 foldGutter: true,
                 gutters: ["CodeMirror-linenumbers", "CodeMirror-foldgutter"],
                 mode: "javascript",
@@ -214,6 +214,14 @@ define([
 
             var canonicalize = function (t) { return t.replace(/\r\n/g, '\n'); };
 
+            var setHistory = function (bool, update) {
+                isHistoryMode = bool;
+                setEditable(!bool);
+                if (!bool && update) {
+                    config.onRemote();
+                }
+            };
+
             var isDefaultTitle = function () {
                 var parsed = Cryptpad.parsePadUrl(window.location.href);
                 return Cryptpad.isDefaultName(parsed, APP.title);
@@ -245,6 +253,7 @@ define([
 
             var onLocal = config.onLocal = function () {
                 if (initializing) { return; }
+                if (isHistoryMode) { return; }
                 if (readOnly) { return; }
 
                 editor.save();
@@ -503,7 +512,7 @@ define([
             var onInit = config.onInit = function (info) {
                 userList = info.userList;
 
-                var config = {
+                var configTb = {
                     displayed: ['useradmin', 'spinner', 'lag', 'state', 'share', 'userlist', 'newpad'],
                     userData: userData,
                     readOnly: readOnly,
@@ -519,8 +528,7 @@ define([
                     },
                     common: Cryptpad
                 };
-                if (readOnly) {delete config.changeNameID; }
-                toolbar = module.toolbar = Toolbar.create($bar, info.myID, info.realtime, info.getLag, info.userList, config);
+                toolbar = module.toolbar = Toolbar.create($bar, info.myID, info.realtime, info.getLag, info.userList, configTb);
 
                 var $rightside = $bar.find('.' + Toolbar.constants.rightside);
                 var $userBlock = $bar.find('.' + Toolbar.constants.username);
@@ -532,6 +540,38 @@ define([
                 if (!readOnly) {
                     editHash = Cryptpad.getEditHashFromKeys(info.channel, secret.keys);
                 }
+
+                /* add a history button */
+                var histConfig = {};
+                histConfig.onRender = function (val) {
+                    if (typeof val === "undefined") { return; }
+                    try {
+                        var hjson = JSON.parse(val || '{}');
+                        var remoteDoc = hjson.content;
+                        editor.setValue(remoteDoc || '');
+                        editor.save();
+                    } catch (e) {
+                        // Probably a parse error
+                        console.error(e);
+                    }
+                };
+                histConfig.onClose = function () {
+                    // Close button clicked
+                    setHistory(false, true);
+                };
+                histConfig.onRevert = function () {
+                    // Revert button clicked
+                    setHistory(false, false);
+                    config.onLocal();
+                    config.onRemote();
+                };
+                histConfig.onReady = function () {
+                    // Called when the history is loaded and the UI displayed
+                    setHistory(true);
+                };
+                histConfig.$toolbar = $bar;
+                var $hist = Cryptpad.createButton('history', true, {histConfig: histConfig});
+                $rightside.append($hist);
 
                 /* save as template */
                 if (!Cryptpad.isTemplate(window.location.href)) {
@@ -840,8 +880,9 @@ define([
                 return cursor;
             };
 
-            var onRemote = config.onRemote = function (info) {
+            var onRemote = config.onRemote = function () {
                 if (initializing) { return; }
+                if (isHistoryMode) { return; }
                 var scroll = editor.getScrollInfo();
 
                 var oldDoc = canonicalize($textarea.val());
@@ -929,6 +970,7 @@ define([
         var second = function (CM) {
             Cryptpad.ready(function (err, env) {
                 andThen(CM);
+                Cryptpad.reportAppUsage();
             });
             Cryptpad.onError(function (info) {
                 if (info && info.type === "store") {

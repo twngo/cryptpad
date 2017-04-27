@@ -1,9 +1,8 @@
 define([
+    'jquery',
     '/common/cryptpad-common.js',
-    '/common/login.js',
-    '/bower_components/jquery/dist/jquery.min.js',
-], function (Cryptpad, Login) {
-    var $ = window.$;
+    '/common/login.js'
+], function ($, Cryptpad, Login) {
 
     var APP = window.APP = {
         Cryptpad: Cryptpad,
@@ -82,6 +81,7 @@ define([
                             proxy.edPrivate = result.edPrivate;
                             proxy.edPublic = result.edPublic;
 
+                            Cryptpad.feedback('LOGIN', true);
                             Cryptpad.whenRealtimeSyncs(result.realtime, function() {
                                 Cryptpad.login(result.userHash, result.userName, function () {
                                     if (sessionStorage.redirectTo) {
@@ -124,4 +124,3 @@ define([
         });
     });
 });
-

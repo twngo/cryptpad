@@ -1,9 +1,8 @@
 define([
+    'jquery',
     '/customize/application_config.js',
-    '/api/config',
-    '/bower_components/jquery/dist/jquery.min.js'
-], function (Config, ApiConfig) {
-    var $ = window.jQuery;
+    '/api/config'
+], function ($, Config, ApiConfig) {
 
     var Messages = {};
 
@@ -23,6 +22,7 @@ define([
     var TOP_CLS = Bar.constants.top = 'cryptpad-toolbar-top';
     var LEFTSIDE_CLS = Bar.constants.leftside = 'cryptpad-toolbar-leftside';
     var RIGHTSIDE_CLS = Bar.constants.rightside = 'cryptpad-toolbar-rightside';
+    var HISTORY_CLS = Bar.constants.history = 'cryptpad-toolbar-history';
 
     var SPINNER_CLS = Bar.constants.spinner = 'cryptpad-spinner';
 
@@ -74,7 +74,8 @@ define([
         })
         .append($('<div>', {'class': TOP_CLS}))
         .append($('<div>', {'class': LEFTSIDE_CLS}))
-        .append($('<div>', {'class': RIGHTSIDE_CLS}));
+        .append($('<div>', {'class': RIGHTSIDE_CLS}))
+        .append($('<div>', {'class': HISTORY_CLS}));
 
         // The 'notitle' class removes the line added for the title with a small screen
         if (!config || typeof config !== "object") {
