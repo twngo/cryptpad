@@ -31,6 +31,15 @@ define([
     var onConnectError = function (info) {
         Cryptpad.errorLoadingScreen(Messages.websocketError);
     };
+
+    var emitResize = module.emitResize = function () {
+        var cw = $('#svgeditorframe')[0].contentWindow;
+
+        var evt = cw.document.createEvent('UIEvents');
+        evt.initUIEvent('resize', true, false, cw, 0);
+        cw.dispatchEvent(evt);
+    };
+
     var toolbar;
 
     var secret = Cryptpad.getSecrets();
@@ -56,6 +65,7 @@ define([
         var $bar = $('#toolbar');
         var parsedHash = Cryptpad.parsePadUrl(window.location.href);
         var defaultName = Cryptpad.getDefaultName(parsedHash);
+        var isHistoryMode = false;
         var userData = module.userData = {}; // List of pretty name of all users (mapped with their server ID)
         var userList; // List of users still connected to the channel (server IDs)
         var addToUserData = function(data) {
@@ -133,6 +143,45 @@ define([
 
             var $rightside = $bar.find('.' + Toolbar.constants.rightside);
 
+            /* add a history button */
+            var histConfig = {};
+            histConfig.onRender = function (val) {
+                if (typeof val === "undefined") { return; }
+                try {
+                    console.log("History render: " + val);
+                    var svgCanvas = frames[0].window.svgCanvas;
+                    var svgEditor = frames[0].window.svgEditor;
+                    var newSVG = hjson2domstring(val);
+                    svgCanvas.clearSelection();
+                    svgCanvas.clear();
+                    svgCanvas.setSvgString(newSVG);
+                    svgEditor.updateCanvas();
+                } catch (e) {
+                    // Probably a parse error
+                    console.error(e);
+                }
+            };
+            histConfig.onClose = function () {
+                // Close button clicked
+                setHistory(false, true);
+                jQuery("#editor")[0].style="margin-top: 70px;";
+
+            };
+            histConfig.onRevert = function () {
+                // Revert button clicked
+                setHistory(false, false);
+                onLocal();
+                onRemote();
+            };
+            histConfig.onReady = function () {
+                // Called when the history is loaded and the UI displayed
+                setHistory(true);
+                jQuery("#editor")[0].style="margin-top: 100px;";
+            };
+            histConfig.$toolbar = $bar;
+            var $hist = Cryptpad.createButton('history', true, {histConfig: histConfig});
+            $rightside.append($hist);
+
             var $export = Cryptpad.createButton('export', true, {}, saveImage);
             $rightside.append($export);
 
@@ -154,6 +203,14 @@ define([
                     console.error(e);
                 }
             };
+        };
+
+        var setHistory = function (bool, update) {
+            isHistoryMode = bool;
+            // setEditable(!bool);
+            if (!bool && update) {
+                  config.onRemote();
+            }
         };
 
         var updateTitle = function (newTitle) {
@@ -245,6 +302,7 @@ define([
 
         var onRemote = config.onRemote = Catch(function () {
             if (initializing) { return; }
+            if (isHistoryMode) { return; }
             var svgCanvas = frames[0].window.svgCanvas;
             var svgEditor = frames[0].window.svgEditor;
             /* var userDoc = module.realtime.getUserDoc();
@@ -264,8 +322,10 @@ define([
             console.log("Remote content hjson: " + shjson);
 
             var newSVG = hjson2domstring(shjson);            
-            if (newSVG==currentSVG)
+            if (newSVG==currentSVG) {
+                restoreSelection(svgCanvas, selectedElements);
                 return;
+            }
             console.log("Remote content svg: " + newSVG);
             svgCanvas.clear();
             svgCanvas.setSvgString(newSVG);
@@ -357,6 +417,7 @@ define([
 
         var onLocal = config.onLocal = Catch(function () {
             if (initializing) { return; }
+            if (isHistoryMode) { return; }
             if (readOnly) { return; }
             
             var svgCanvas = frames[0].window.svgCanvas;
