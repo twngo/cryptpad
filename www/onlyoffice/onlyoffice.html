@@ -1,0 +1,34 @@
+<html>
+<body>
+<div id="placeholder"></div>
+<script type="text/javascript" src="/web-apps/apps/api/documents/api.js"></script>
+<script type="text/javascript">
+
+config = {
+    "document": {
+        "fileType": "docx",
+        "key": "Khirz6zTPdfd7",
+        "title": "test.docx",
+        "url": "http://localhost:3000/onlyoffice/test.docx"
+    },
+    "documentType": "text",
+    "editorConfig": {
+                        "user": {
+                        "id": "c0c3bf82-20d7-4663-bf6d-7fa39c598b1d",
+                        "name": "John Smith"
+                    }
+    },
+    "events": {
+      onDownloadAs: function (evt) { save(evt.data); },
+    }
+};
+
+function save(data) {
+ console.log(data);
+ alert("in save");
+}
+
+var docEditor = new DocsAPI.DocEditor("placeholder", config);
+</script>
+</body>
+</html>
