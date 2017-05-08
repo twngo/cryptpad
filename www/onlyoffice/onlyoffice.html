@@ -19,14 +19,11 @@ config = {
                     }
     },
     "events": {
-      onDownloadAs: function (evt) { save(evt.data); },
+     "onDocumentStateChange": function(evt) { console.log("in change"); window.top.APP.config.onLocal(); },
+     "onReady": function(evt) { console.log("in onReady"); window.top.APP.config.onRemoteInit(); } 
     }
 };
 
-function save(data) {
- console.log(data);
- alert("in save");
-}
 
 var docEditor = new DocsAPI.DocEditor("placeholder", config);
 </script>

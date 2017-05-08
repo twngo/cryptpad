@@ -44,14 +44,21 @@ define([
 
     var secret = Cryptpad.getSecrets();
     var readOnly = secret.keys && !secret.keys.editKeyStr;
+    var ooReady = false;
+    var firstRemote = false;
+
     if (!secret.keys) {
         secret.keys = secret.key;
     }
 
     var andThen = function () {
 
-        var saveToServer = module.saveDocument = function () {
-            onLocal();
+        var saveToServer = module.saveToServer = function () {
+            config.onLocal();
+        }
+
+        var callRemote = module.callRemote = function() {
+            config.onRemote();
         }
 
         var saveDocument = module.saveDocument = function () {
@@ -67,10 +74,10 @@ define([
 
         var loadDocument = module.loadDocument = function (content, file) {
              console.log("Read " + content); 
+             window.frames[0].frames[0].editor.asc_CloseFile();
              var openResult = {bSerFormat: true, data: content, url: "http://localhost:3000/onlyoffice/", changes: null};
-             window.frames[0].frames[0].editor.openDocument(openResult); 
+             window.frames[0].frames[0].editor.openDocument(openResult);
         };
-
 
         var initializing = true;
 
@@ -192,7 +199,15 @@ define([
             var $import = Cryptpad.createButton('import', true, {}, loadDocument);
             $rightside.append($import);
             var $save = Cryptpad.createButton('save', true, {}, saveToServer);
+            $save.click(function () {
+                       saveToServer();
+            });
             $rightside.append($save);
+            var $remote = Cryptpad.createButton('remote', true, {}, callRemote);
+            $remote.click(function () {
+                      callRemote(); 
+            });
+            $rightside.append($remote);
 
             var editHash;
             var viewHash = Cryptpad.getViewHashFromKeys(info.channel, secret.keys);
@@ -245,23 +260,21 @@ define([
             $bar.find('.' + Toolbar.constants.title).find('input').attr("placeholder", defaultName);
         };
 
-/*
         var updateMetadata = function(shjson) {
             // Extract the user list (metadata) from the hyperjson
             var json = (shjson === "") ? "" : JSON.parse(shjson);
             var titleUpdated = false;
-            var peerMetadata = json[3];
-            if (peerMetadata && json.peerMetadata) {
-                if (peerMetadata.users) {
-                    var userData = peerMetadata.users;
+            if (json && json.metadata) {
+                if (json.metadata.users) {
+                    var userData = json.metadata.users;
                     // Update the local user data
                     addToUserData(userData);
                 }
-                if (peerMetadata.defaultTitle) {
-                    updateDefaultTitle(peerMetadata.defaultTitle);
+                if (json.metadata.defaultTitle) {
+                    updateDefaultTitle(json.metadata.defaultTitle);
                 }
-                if (typeof peerMetadata.title !== "undefined") {
-                    updateTitle(peeMetadata.title || defaultName);
+                if (typeof json.metadata.title !== "undefined") {
+                    updateTitle(json.metadata.title || defaultName);
                     titleUpdated = true;
                 }
             }
@@ -269,32 +282,6 @@ define([
                 updateTitle(defaultName);
             }
         };
-*/
-
-   var updateMetadata = function(shjson) {
-                // Extract the user list (metadata) from the hyperjson
-                if (!shjson || typeof (shjson) !== "string") { updateTitle(defaultName); return; }
-                var hjson = JSON.parse(shjson);
-                var peerMetadata = hjson[3];
-                var titleUpdated = false;
-                if (peerMetadata && peerMetadata.metadata) {
-                    if (peerMetadata.metadata.users) {
-                        var userData = peerMetadata.metadata.users;
-                        // Update the local user data
-                        addToUserData(userData);
-                    }
-                    if (peerMetadata.metadata.defaultTitle) {
-                        updateDefaultTitle(peerMetadata.metadata.defaultTitle);
-                    }
-                    if (typeof peerMetadata.metadata.title !== "undefined") {
-                        updateTitle(peerMetadata.metadata.title || defaultName);
-                        titleUpdated = true;
-                    }
-                }
-                if (!titleUpdated) {
-                    updateTitle(defaultName);
-                }
-            };
 
         var hjson2domstring = function(hjson) {
             var userDocStateDom = hjsonToDom(JSON.parse(hjson));
@@ -303,13 +290,13 @@ define([
             return tmp.innerHTML;
         };
 
-        var domstring2hjson = function(domstring) {
-            var tmp = document.createElement("div");
-            tmp.innerHTML = domstring;
-            return stringifyDOM(tmp.firstChild);
-};
+        var onRemoteInit = config.onRemoteInit = Catch(function() {
+           console.log("In onRemoteInit");
+           ooReady = true;
+        });
 
         var onRemote = config.onRemote = Catch(function () {
+            console.log("In onRemote");
             if (initializing) { return; }
             if (isHistoryMode) { return; }
 
@@ -317,9 +304,35 @@ define([
             readOnly = true;
 
             try {
-             readOnly = false;
+              if (window.frames[0].frames[0]==null || window.frames[0].frames[0].editor==null) {
+                console.log("Cannot access editor");
+                return;
+              }
+
+              console.log("In onRemote sync");
+              var previousData = window.frames[0].frames[0].editor.asc_nativeGetFile();
+              var userDoc = module.realtime.getUserDoc();
+            
+              console.log("Current data " + previousData);
+
+              updateMetadata(userDoc);
+              var json = JSON.parse(userDoc);
+              var remoteDoc = json.content;
+              if (remoteDoc!=previousData) {
+                console.log("Remote content is different")
+                console.log("Remote content hjson: " + remoteDoc);
+                if (ooReady) {
+                  loadDocument(remoteDoc);
+                  firstRemote = true;
+                }
+              } else {
+                console.log("Data is unchanged");
+              }
+
+              readOnly = false;
             } catch(e) {
-             readOnly = false;
+            } finally {
+              readOnly = false;
             }
 
        
@@ -354,38 +367,42 @@ define([
             return dom;
         };
 
-        var isNotMagicLine = function (el) {
-            return !(el && typeof(el.getAttribute) === 'function' &&
-             el.getAttribute('class') &&
-             el.getAttribute('class').split(' ').indexOf('non-realtime') !== -1);
-        };
 
-        /* catch `type="_moz"` before it goes over the wire */
-        var brFilter = function (hj) {
-            if (hj[1].type === '_moz') { hj[1].type = undefined; }
-            return hj;
-        };
-
-        var stringifyDOM = module.stringifyDOM = function (dom) {
-                var hjson = Hyperjson.fromDOM(dom, isNotMagicLine, brFilter);
-                hjson[3] = {
-                    metadata: {
-                        users: userData,
-                        defaultTitle: defaultName
-                    }
-                };
-                if (!initializing) {
-                    hjson[3].metadata.title = document.title;
-                } else if (Cryptpad.initialName && !hjson[3].metadata.title) {
-                    hjson[3].metadata.title = Cryptpad.initialName;
+        var stringifyInner = function (textValue) {
+            var obj = {
+                content: textValue,
+                metadata: {
+                    users: userData,
+                    defaultTitle: defaultName
                 }
-                return stringify(hjson);
+            };
+            if (!initializing) {
+                obj.metadata.title = document.title;
+            }
+            // stringify the json and send it into chainpad
+            return JSONSortify(obj);
         };
 
         var onLocal = config.onLocal = Catch(function () {
+            console.log("In onLocal");
             if (initializing) { return; }
             if (isHistoryMode) { return; }
             if (readOnly) { return; }
+            if (!ooReady) { return; }
+
+            if (!firstRemote) {
+              console.log("First remote");
+              onRemote();
+              console.log("First remote success");
+            }
+
+            if (window.frames[0].frames[0]==null || window.frames[0].frames[0].editor==null)
+               return;
+
+            console.log("In onLocal sync");
+            var data = window.frames[0].frames[0].editor.asc_nativeGetFile();
+            var content = stringifyInner(data);
+            module.patchText(content);
         });
 
         var setName = module.setName = function (newName) {
@@ -438,7 +455,7 @@ define([
                     };
                     addToUserData(myData);
                     onLocal();
-                    module.$userNameButton.click();
+                    // module.$userNameButton.click();
                 }
             });
         };
@@ -453,14 +470,6 @@ define([
         };
 
         var rt = Realtime.start(config);
-
-        $('#clear').on('click', function () {
-            canvas.clear();
-        });
-
-        $('#save').on('click', function () {
-            saveImage();
-        });
     };
 
     Cryptpad.ready(function (err, env) {
