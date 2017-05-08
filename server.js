@@ -4,11 +4,12 @@
 var Express = require('express');
 var Http = require('http');
 var Https = require('https');
+var BodyParser = require('body-parser');
 var Fs = require('fs');
 var WebSocketServer = require('ws').Server;
 var NetfluxSrv = require('./node_modules/chainpad-server/NetfluxWebsocketSrv');
 var Package = require('./package.json');
-
+var OOServer = require('./ooserver.js');
 var config = require('./config');
 var websocketPort = config.websocketPort || config.httpPort;
 var useSecureWebsockets = config.useSecureWebsockets || false;
@@ -124,11 +125,58 @@ app.get('/api/config', function(req, res){
     }) + ');');
 });
 
-var httpServer = httpsOpts ? Https.createServer(httpsOpts, app) : Http.createServer(app);
+app.use(Express.static(__dirname + '/'));
 
-httpServer.listen(config.httpPort,config.httpAddress,function(){
-    console.log('[%s] listening on port %s', new Date().toISOString(), config.httpPort);
+var FONT_OBFUSCATION_MAGIC = new Buffer([
+    0xA0, 0x66, 0xD6, 0x20, 0x14, 0x96, 0x47, 0xfa, 0x95, 0x69, 0xB8, 0x50, 0xB0, 0x41, 0x49, 0x48
+]);
+
+
+var FONT_NAME_MAP = {};
+[ './fonts/' ].forEach(function (path) {
+    Fs.readdir(path, function (err, list) {
+        if (err) { throw err; }
+        list.forEach(function (fontName) {
+            FONT_NAME_MAP[fontName.toLowerCase()] = path + fontName;
+        });
+    });
 });
+
+app.use("/fonts/odttf/:name", function (req, res) {
+    var name = req.params.name.replace(/\.js$/, '').toLowerCase();
+    console.log(name);
+    if (!FONT_NAME_MAP[name]) {
+        console.log(name);
+        console.log(FONT_NAME_MAP[name]);
+        res.status(400).send('No such font');
+        return;
+    }
+    Fs.readFile(FONT_NAME_MAP[name], function (err, ret) {
+        if (err) { throw err; }
+        var maxLen = Math.min(32, ret.length);
+        for (var i = 0; i < maxLen; i++) {
+            ret[i] ^= FONT_OBFUSCATION_MAGIC[i % 16];
+        }
+        res.end(ret);
+    });
+});
+
+// Replace allfonts.js call with non obfuscated fonts allfonts.js
+app.use("/sdkjs/common/AllFonts.js",
+    Express.static("./www/onlyoffice/allfonts-noobf.js"));
+
+// Replace fonts thumbnail call
+app.use("/sdkjs/common/Images/fonts_thumbnail@2x.png",
+    Express.static("./www/onlyoffice/fonts_thumbnail.png"));
+
+
+var jsonParser = BodyParser.json();
+
+var httpServer = httpsOpts ? Https.createServer(httpsOpts, app) : Http.createServer(app);
+OOServer.install(httpServer, () => {
+ httpServer.listen(config.httpPort,config.httpAddress,function(){
+    console.log('[%s] listening on port %s', new Date().toISOString(), config.httpPort);
+ });
 
 var wsConfig = { server: httpServer };
 
@@ -161,3 +209,4 @@ var loadRPC = function (cb) {
 };
 
 loadRPC(createSocketServer);
+});
