@@ -5,7 +5,7 @@ const co = require('co');
 exports.install = function(server, callbackFunction) {
 var sockjs_opts = {sockjs_url: ""},
 sockjs_echo = sockjs.createServer(sockjs_opts),
-urlParse = new RegExp("^/doc/([0-9-.a-zA-Z_=]*)/c.+", 'i');
+urlParse = new RegExp("^/onlyoffice/doc/([0-9-.a-zA-Z_=]*)/c.+", 'i');
 
 console.log("Start ooserver");
 console.log("Port " + sockjs_echo.port);
@@ -63,8 +63,13 @@ sockjs_echo.on('connection', function(conn) {
         switch (data.type) {
          case 'auth':
           console.log("Response auth");
+          var fileUrl = "http://localhost:3000/onlyoffice/document/test.bin";
+          if (data.openCmd.format=="xlsx")
+            fileUrl = "http://localhost:3000/onlyoffice/spreadsheet/test.bin"
+          else if (data.openCmd.format=="pptx")
+            fileUrl = "http://localhost:3000/onlyoffice/presentation/test.bin"
           sendData(conn, {"type":"auth","result":1,"sessionId":"08e77705-dc5c-477d-b73a-b1a7cbca1e9b","sessionTimeConnect":1494226099270,"participants":[]});
-          sendData(conn, {"type":"documentOpen","data":{"type":"open","status":"ok","data":{"Editor.bin":"http://localhost:3000/onlyoffice/test.bin"}}});
+          sendData(conn, {"type":"documentOpen","data":{"type":"open","status":"ok","data":{"Editor.bin":fileUrl}}});
           break;
          default:
           break;
@@ -97,7 +102,7 @@ sockjs_echo.on('connection', function(conn) {
          });
 });
 
-  sockjs_echo.installHandlers(server, {prefix: '/doc/[0-9-.a-zA-Z_=]*/c', log: function(severity, message) {
+  sockjs_echo.installHandlers(server, {prefix: '/onlyoffice/doc/[0-9-.a-zA-Z_=]*/c', log: function(severity, message) {
     console.log(message);
   }});
 
