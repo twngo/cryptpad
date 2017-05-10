@@ -6,6 +6,18 @@
 
 Unity is Strength - Collaboration is Key
 
+# Expertimental OnlyOffice branch
+
+This branch includes a very experimental OnlyOffice module. 
+
+The onlyoffice built code is commited in www/onlyoffice/web-apps and www/onlyoffice/sdkjs. This code can be build using www/onlyoffice/build.sh from the forks commited on https://github.com/ldubost/web-apps and github.com/ldubost/sdkjs. The forks have limited modifications:
+
+* removal of licence and version checks
+* added "editor" object in the spreadsheet to expose the editor code
+
+To test onlyoffice module visit /onlyoffice/ to see a link to the 3 editors. Currently only document and presentation are loading for a full editing, saving and reloading from cryptpad storage. The spreadsheet editor can load for editing and saving to cryptpad storage but cannot reload the saved version. The realtime capability are very limited as the merging is not using an OT algorythm but replaces the a base64 export of the onlyoffice document. Realtime between 2 sessions partially works on document and presentation. The editors have not been tested beyond simple editing. There are known issue including the support of images which is not working.
+
+Also import/exporting from Office formats is not supported.
 
 
 ![and_so_it_begins.png](https://github.com/cjdelisle/cryptpad/raw/master/and_so_it_begins.png "We are the 99%")
