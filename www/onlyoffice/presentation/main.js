@@ -323,7 +323,7 @@ define([
                 console.log("Remote content is different")
                 // console.log("Remote content hjson: " + remoteDoc);
                 if (ooReady) {
-                  if (remoteDoc)
+                  if (remoteDoc) {
                     loadDocument(remoteDoc);
                   firstRemote = true;
                 }

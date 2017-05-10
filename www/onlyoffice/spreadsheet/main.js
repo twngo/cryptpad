@@ -79,6 +79,7 @@ define([
              window.frames[0].frames[0].editor.DocumentLoadComplete = false;
              window.frames[0].frames[0].editor.IsSendDocumentLoadCompleate = false;
              window.frames[0].frames[0].editor.openDocument(content);
+             window.frames[0].frames[0].editor.SetTextBoxInputMode(true);
         };
 
         var initializing = true;
@@ -324,11 +325,13 @@ define([
                 console.log("Remote content is different")
                 console.log("Remote content hjson: " + remoteDoc);
                 if (ooReady) {
-                  loadDocument(remoteDoc);
+                  if (remoteDoc)
+                    loadDocument(remoteDoc);
                   firstRemote = true;
                 }
               } else {
                 console.log("Data is unchanged");
+                firstRemote = true;
               }
 
               readOnly = false;
@@ -394,7 +397,13 @@ define([
 
             if (!firstRemote) {
               console.log("First remote");
-              // onRemote();
+              onRemote();
+              if (firstRemote) {
+               console.log("First remote success");
+              } else {
+               console.log("First remote failure");
+               return;
+              }
             }
 
             if (window.frames[0].frames[0]==null || window.frames[0].frames[0].editor==null)
