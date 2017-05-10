@@ -19,6 +19,10 @@ To test onlyoffice module visit /onlyoffice/ to see a link to the 3 editors. Cur
 
 Also import/exporting from Office formats is not supported.
 
+# Experimental svgedit
+
+This branch also contains the code from the svgedit branch as it is branch for it. However it might not be updated with the latest code.
+
 
 ![and_so_it_begins.png](https://github.com/cjdelisle/cryptpad/raw/master/and_so_it_begins.png "We are the 99%")
 
