@@ -6,7 +6,10 @@
 
 Unity is Strength - Collaboration is Key
 
+# Experimental svgedit module branch
 
+This branch includes an experimental svgedit module. Visit /svgedit/ to load an svg document.
+The svgedit 2.8.1 code is commited directly in the www/svgedit/ directory as is.
 
 ![and_so_it_begins.png](https://github.com/cjdelisle/cryptpad/raw/master/and_so_it_begins.png "We are the 99%")
 
