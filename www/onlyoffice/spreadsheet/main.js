@@ -74,12 +74,13 @@ define([
 
         var loadDocument = module.loadDocument = function (content, file) {
              console.log("Read " + content); 
-             // window.frames[0].frames[0].editor.asc_CloseFile();
-             // var openResult = {bSerFormat: true, data: content, url: "http://localhost:3000/onlyoffice/", changes: null};
+             window.frames[0].frames[0].AscCommon.g_inputContext = null;
              window.frames[0].frames[0].editor.DocumentLoadComplete = false;
              window.frames[0].frames[0].editor.IsSendDocumentLoadCompleate = false;
              window.frames[0].frames[0].editor.openDocument(content);
-             window.frames[0].frames[0].editor.SetTextBoxInputMode(true);
+             window.frames[0].frames[0].editor.asc_Resize()
+//             window.frames[0].frames[0].editor.SetTextBoxInputMode(true);
+
         };
 
         var initializing = true;
