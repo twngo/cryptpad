@@ -147,7 +147,6 @@ var FONT_NAME_MAP = {};
 
 /* Code to automatically transform font to js */ 
 /* Currently not active, but might be necessary */
-/*
 app.use("/onlyoffice/fonts/odttf/:name", function (req, res) {
     var name = req.params.name.replace(/\.js$/, '').toLowerCase();
     console.log(name);
@@ -166,10 +165,11 @@ app.use("/onlyoffice/fonts/odttf/:name", function (req, res) {
         res.end(ret);
     });
 });
-*/
+
 
 /* Set of manual fonts needed by the editors */
 /* It would be better to use the convertor but if the font is missing then the editor might not load */
+/*
 app.use("/onlyoffice/fonts/odttf/epywa1knkjr1hinwea.js",
     Express.static("./www/onlyoffice/fonts/epywa1knkjr1hinwea.js"));
 app.use("/onlyoffice/fonts/odttf/epywa1knkjrw1m1wktdy.js",
@@ -190,6 +190,7 @@ app.use("/onlyoffice/fonts/odttf/cf3g1aucpcz8e7dg.js",
     Express.static("./www/onlyoffice/fonts/epywa1knkjrw1m1wktdy.js"));
 app.use("/onlyoffice/fonts/odttf/cjozeamqchz8e7dd.js",
     Express.static("./www/onlyoffice/fonts/epywa1knkjrw1m1wktdy.js"));
+*/
 
 /* All fonts file replaced by the list of fonts in ttf */
 app.use("/onlyoffice/sdkjs/common/AllFonts.js",
