@@ -227,15 +227,17 @@ define([
         var getDocument = function() {
             var data = window.frames[0].editorUI.getFileData();
             var x2js = new X2JS();
-            return JSON.stringify(x2js.xml_str2json(data))
+            return x2js.xml_str2json(data)
         }
 
         var loadDocument = function(json) {
           try {
             if (json) {
              var x2js = new X2JS();
-             var xml = x2js.json2xml_str(JSON.parse(json));
+             var xml = x2js.json2xml_str(json);
+             var selection = storeSelection();
              window.frames[0].editorUI.setFileData(xml);
+             restoreSelection(selection);
             }
           } catch (e) {
             console.log("Exception while loading " + json)
@@ -340,19 +342,6 @@ define([
 	   return obj;
         };
 
-        var hjson2domstring = function(hjson) {
-            var userDocStateDom = hjsonToDom(JSON.parse(hjson));
-            var tmp = document.createElement("div");
-            tmp.appendChild(userDocStateDom);
-            return tmp.innerHTML;
-        };
-
-        var domstring2hjson = function(domstring) {
-            var tmp = document.createElement("div");
-            tmp.innerHTML = domstring;
-            return stringifyDOM(tmp.firstChild);
-        };
-
         var onRemote = config.onRemote = Catch(function () {
             if (initializing) { return; }
             if (isHistoryMode) { return; }
@@ -373,92 +362,40 @@ define([
             }
         });
 
-        var diffOptions = {
-                preDiffApply: function (info) {
-                },
-                postDiffApply : function(info) {
-                }
-        };
-
-        var DD = new DiffDom(diffOptions);
-
-        // apply patches, and try not to lose the cursor in the process!
-        var applyHjson = function (shjson, domElement) {
-                var userDocStateDom = hjsonToDom(JSON.parse(shjson));
-
-                if (!readOnly && !initializing) {
-                    userDocStateDom.setAttribute("contenteditable", "true"); // lol wtf
-                }
-                var patch = (DD).diff(domElement, userDocStateDom);
-                (DD).apply(domElement, patch);
-        };
-
-        var stringify = function (obj) {
-            return JSONSortify(obj);
-        };
-
-        var hjsonToDom = function (H) {
-            var dom = Hyperjson.toDOM(H);
-            return dom;
-        };
-
-        var isNotMagicLine = function (el) {
-            return !(el && typeof(el.getAttribute) === 'function' &&
-             el.getAttribute('class') &&
-             el.getAttribute('class').split(' ').indexOf('non-realtime') !== -1);
-        };
-
-        /* catch `type="_moz"` before it goes over the wire */
-        var brFilter = function (hj) {
-            if (hj[1].type === '_moz') { hj[1].type = undefined; }
-            return hj;
-        };
-
-        var stringifyDOM = module.stringifyDOM = function (dom) {
-                var hjson = Hyperjson.fromDOM(dom, isNotMagicLine, brFilter);
-                hjson[3] = {
-                    metadata: {
-                        users: userData,
-                        defaultTitle: defaultName
-                    }
-                };
-                if (!initializing) {
-                    hjson[3].metadata.title = document.title;
-                } else if (Cryptpad.initialName && !hjson[3].metadata.title) {
-                    hjson[3].metadata.title = Cryptpad.initialName;
-                }
-                return stringify(hjson);
-        };
-
-        var getDocElement = function() {
-            return jQuery('#svgcontent', window.parent.frames[0].document)[0];
+        var storeSelection = function() {
+          try {
+            return { "elements" : window.frames[0].editorUI.editor.graph.getSelectionCells(), "translate" : window.frames[0].editorUI.editor.graph.view.getTranslate() };
+          } catch(e) {
+            console.log("Exception storing selection");
+            console.log(e);
+            return null;
+          }     
         }
 
-        /*
-        var storeSelection = function(svgCanvas) {
-            var elementIds = []
-            var elements = svgCanvas.getSelectedElems();
-            elements.forEach(function(element) {
-              if (element!=null)
-                elementIds.push(element.id);
-            });                
-            return elementIds;
+        var restoreSelection = function(selection) {
+          try {
+           var graph = window.frames[0].editorUI.editor.graph;
+           if (selection && selection.elements) {
+             selection.elements.forEach(function(element) {
+               if (element!=null) {
+                 var cell = graph.model.getCell(element.id);
+                 if (cell) 
+                   graph.addSelectionCell(cell);
+               } 
+             });
+             if (selection.translate)
+		     window.frames[0].editorUI.editor.graph.view.getTranslate(selection.translate.x, selection.translate.y)
+           }
+          } catch(e) {
+            console.log("Exception restoring selection");
+            console.log(e);
+            return null;
+          }     
         }
 
-        var restoreSelection = function(svgCanvas, elements) {
-            elements.forEach(function(element) {
-             if (element!=null) {
-              var el = svgCanvas.getElem(element);
-              if (el!=null)
-                svgCanvas.addToSelection([el]);
-             }
-            });                 
-        }
-        */
-
-        var stringifyInner = function (textValue) {
+        var stringifyInner = function (json) {
             var obj = {
-                content: textValue,
+                content: json,
                 metadata: {
                     users: userData,
                     defaultTitle: defaultName
