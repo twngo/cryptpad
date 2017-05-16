@@ -335,7 +335,7 @@ define([
                 crypto: Crypto.createEncryptor(secret.keys),
 
                 // really basic operational transform
-                transformFunction : JsonOT.validate,
+                transformFunction : JsonOT.transform,
 
                 // cryptpad debug logging (default is 1)
                 // logLevel: 0,
@@ -631,6 +631,8 @@ define([
                 if (initializing) { return; }
                 if (isHistoryMode) { return; }
                 if (readOnly) { return; }
+
+                inner.normalize();
 
                 // stringify the json and send it into chainpad
                 var shjson = stringifyDOM(inner);
