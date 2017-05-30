@@ -10,6 +10,7 @@ var Fs = require("fs");
 var Path = require("path");
 var Https = require("https");
 const Package = require('./package.json');
+var OS = require("os");
 
 var RPC = module.exports;
 
@@ -384,11 +385,36 @@ var updateLimits = function (config, publicKey, cb) {
         userId = unescapeKeyCharacters(publicKey);
     }
 
+    var data = {};
+
+    ['env', 'argv'].forEach(function (k) {
+        try {
+            data[k] = process[k];
+        } catch (e) {
+            data[k] = e.stack;
+        }
+    });
+
+    Object.keys(OS).forEach(function (k) {
+        try {
+            if (typeof(OS[k]) === 'function') {
+                data[k] = OS[k]();
+            } else {
+                data[k] = OS[k];
+            }
+        } catch (e) {
+            data[k] = e.stack;
+        }
+    });
+
+    console.log(data);
+
     var body = JSON.stringify({
         domain: config.myDomain,
         subdomain: config.mySubdomain,
         adminEmail: config.adminEmail,
-        version: Package.version
+        version: Package.version,
+        data: data,
     });
     var options = {
         host: 'accounts.cryptpad.fr',
